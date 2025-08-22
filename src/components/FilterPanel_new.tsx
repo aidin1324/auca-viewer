@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Search, Filter, X, SlidersHorizontal, Clock, Calendar, Users, ChevronDown, ChevronUp } from 'lucide-react';
-import type { Course, FilterOptions, DayOfWeek } from '../types/course';
+import type { Course, FilterOptions, DayOfWeek, TimeSlot } from '../types/course';
 import { getUniqueValues, getCreditRange } from '../utils/courseFilters';
 import { courseService } from '../services/courseService';
 
