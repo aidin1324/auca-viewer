@@ -168,12 +168,21 @@ export const CourseCard: React.FC<CourseCardProps> = ({ course }) => {
                         <div className="flex items-center text-gray-600">
                           <Users className="w-4 h-4 mr-2 flex-shrink-0" />
                           <span>
-                            {detail.count > 0 
-                              ? `${detail.count}/${detail.number_of_students} мест`
-                              : detail.number_of_students > 0 
-                                ? `${detail.number_of_students} мест`
-                                : 'Места не указаны'
-                            }
+                            {detail.number_of_students > 0 ? (
+                              detail.count > 0 ? (
+                                <span className={detail.count < detail.number_of_students ? 'text-green-600' : 'text-red-600'}>
+                                  {detail.count}/{detail.number_of_students} мест
+                                  {detail.count < detail.number_of_students && ' (доступно)'}
+                                  {detail.count >= detail.number_of_students && ' (занято)'}
+                                </span>
+                              ) : (
+                                <span className="text-green-600">
+                                  0/{detail.number_of_students} мест (доступно)
+                                </span>
+                              )
+                            ) : (
+                              'Места не указаны'
+                            )}
                           </span>
                         </div>
                       </div>
