@@ -30,12 +30,13 @@ export function getDayOfWeekName(dayUid: string): string {
   }
   
   // Если не найден, ищем в mock данных
-  const mockDay = mockDaysOfWeek.find(d => d.uid === dayUid);
+  const mockDay = mockDaysOfWeek.find(d => d.uid === dayUid || d.code === dayUid);
   if (mockDay) {
     return mockDay.name;
   }
   
-  return 'Не указан';
+  console.warn(`Day of week not found for UID: ${dayUid}`);
+  return `День не найден (${dayUid.substring(0, 8)}...)`;
 }
 
 // Получение времени по UID временного слота
@@ -54,7 +55,8 @@ export function getTimeSlotTime(timeUid: string): string {
     return `${formatTime(mockSlot.from_time)} - ${formatTime(mockSlot.to_time)}`;
   }
   
-  return 'Не указано';
+  console.warn(`Time slot not found for UID: ${timeUid}`);
+  return `Время не найдено (${timeUid.substring(0, 8)}...)`;
 }
 
 // Форматирование времени из формата HH:mm:ss в HH:mm
@@ -79,16 +81,21 @@ export function getCourseDetailTimeRange(detail: any): string {
   }
   
   // Если разные временные слоты
-  const fromTime = getTimeSlotTime(detail.from_time);
-  const toTime = getTimeSlotTime(detail.to_time);
-  
-  if (fromTime === 'Не указано' || toTime === 'Не указано') {
-    return 'Время не указано';
+  if (detail.to_time && detail.from_time !== detail.to_time) {
+    const fromTime = getTimeSlotTime(detail.from_time);
+    const toTime = getTimeSlotTime(detail.to_time);
+    
+    if (fromTime.includes('не найдено') || toTime.includes('не найдено')) {
+      return 'Время не указано';
+    }
+    
+    // Извлекаем только начальное время из первого слота и конечное из второго
+    const fromStart = fromTime.split(' - ')[0];
+    const toEnd = toTime.split(' - ')[1];
+    
+    return `${fromStart} - ${toEnd}`;
   }
   
-  // Извлекаем только начальное время из первого слота и конечное из второго
-  const fromStart = fromTime.split(' - ')[0];
-  const toEnd = toTime.split(' - ')[1];
-  
-  return `${fromStart} - ${toEnd}`;
+  // Просто один временной слот
+  return getTimeSlotTime(detail.from_time);
 }

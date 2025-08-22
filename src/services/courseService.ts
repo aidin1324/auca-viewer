@@ -9,8 +9,8 @@ const API_BASE_URL = '/api/v1';
 const LOGIN_URL = `${API_BASE_URL}/user/authenticate/`;
 const COURSES_LIST_URL = `${API_BASE_URL}/organizations/side_bar_list/`;
 const COURSE_INFO_URL_BASE = `${API_BASE_URL}/organizations/info_table/`;
-const DAYS_OF_WEEK_URL = `${API_BASE_URL}/organizations/day_of_week/`;
-const TIME_SLOTS_URL = `${API_BASE_URL}/organizations/time_slots/`;
+const DAYS_OF_WEEK_URL = `${API_BASE_URL}/organizations/online_registration/day_of_week/`;
+const TIME_SLOTS_URL = `${API_BASE_URL}/organizations/online_registration/time_windows/`;
 
 // Параметры для запросов (можно сделать конфигурируемыми)
 const API_PARAMS = {
@@ -59,6 +59,21 @@ export class CourseService {
         return Promise.reject(error);
       }
     );
+
+    // Загружаем справочники при инициализации
+    this.initializeReferenceData();
+  }
+
+  private async initializeReferenceData() {
+    try {
+      await Promise.all([
+        this.getDaysOfWeek(),
+        this.getTimeSlots()
+      ]);
+      console.log('Reference data initialized successfully');
+    } catch (error) {
+      console.warn('Failed to initialize reference data:', error);
+    }
   }
 
   static getInstance(): CourseService {
@@ -171,11 +186,16 @@ export class CourseService {
         return Array.from(this.daysOfWeekCache.values());
       }
 
-      const response = await this.axiosInstance.get(DAYS_OF_WEEK_URL);
+      const params = new URLSearchParams({
+        ...API_PARAMS
+      });
+
+      const response = await this.axiosInstance.get(`${DAYS_OF_WEEK_URL}?${params}`);
       
       if (response.status === 200 && response.data) {
         const days: DayOfWeek[] = response.data;
         days.forEach(day => this.daysOfWeekCache.set(day.uid, day));
+        console.log(`Loaded ${days.length} days of week`);
         return days;
       }
       
@@ -183,7 +203,10 @@ export class CourseService {
     } catch (error: any) {
       console.error('Failed to fetch days of week:', error.response?.status, error.response?.data || error.message);
       // Возвращаем mock данные в случае ошибки (например, в демо режиме)
-      mockDaysOfWeek.forEach(day => this.daysOfWeekCache.set(day.uid, day));
+      if (this.daysOfWeekCache.size === 0) {
+        mockDaysOfWeek.forEach(day => this.daysOfWeekCache.set(day.uid, day));
+        console.log('Using mock days of week data');
+      }
       return mockDaysOfWeek;
     }
   }
@@ -194,11 +217,16 @@ export class CourseService {
         return Array.from(this.timeSlotsCache.values());
       }
 
-      const response = await this.axiosInstance.get(TIME_SLOTS_URL);
+      const params = new URLSearchParams({
+        ...API_PARAMS
+      });
+
+      const response = await this.axiosInstance.get(`${TIME_SLOTS_URL}?${params}`);
       
       if (response.status === 200 && response.data) {
         const timeSlots: TimeSlot[] = response.data;
         timeSlots.forEach(slot => this.timeSlotsCache.set(slot.uid, slot));
+        console.log(`Loaded ${timeSlots.length} time slots`);
         return timeSlots;
       }
       
@@ -206,17 +234,48 @@ export class CourseService {
     } catch (error: any) {
       console.error('Failed to fetch time slots:', error.response?.status, error.response?.data || error.message);
       // Возвращаем mock данные в случае ошибки (например, в демо режиме)
-      mockTimeSlots.forEach(slot => this.timeSlotsCache.set(slot.uid, slot));
+      if (this.timeSlotsCache.size === 0) {
+        mockTimeSlots.forEach(slot => this.timeSlotsCache.set(slot.uid, slot));
+        console.log('Using mock time slots data');
+      }
       return mockTimeSlots;
     }
   }
 
   getDayOfWeekByUid(uid: string): DayOfWeek | null {
-    return this.daysOfWeekCache.get(uid) || null;
+    // Сначала ищем в кэше
+    const cached = this.daysOfWeekCache.get(uid);
+    if (cached) {
+      return cached;
+    }
+    
+    // Если не найдено в кэше, ищем в mock данных
+    const mockDay = mockDaysOfWeek.find(day => day.uid === uid);
+    if (mockDay) {
+      // Добавляем в кэш для будущих запросов
+      this.daysOfWeekCache.set(uid, mockDay);
+      return mockDay;
+    }
+    
+    return null;
   }
 
   getTimeSlotByUid(uid: string): TimeSlot | null {
-    return this.timeSlotsCache.get(uid) || null;
+    // Сначала ищем в кэше
+    const cached = this.timeSlotsCache.get(uid);
+    if (cached) {
+      return cached;
+    }
+    
+    // Если не найдено в кэше, ищем в mock данных
+    const mockSlot = mockTimeSlots.find(slot => slot.uid === uid);
+    if (mockSlot) {
+      // Добавляем в кэш для будущих запросов
+      this.timeSlotsCache.set(uid, mockSlot);
+      return mockSlot;
+    }
+    
+    return null;
   }
 
   async getAllCoursesWithDetails(): Promise<Course[]> {
