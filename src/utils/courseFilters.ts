@@ -56,74 +56,89 @@ export const filterCourses = (courses: Course[], filters: FilterOptions): Course
       if (!hasFormat) return false;
     }
 
-    // Фильтр по дням недели
-    if (filters.daysOfWeek && filters.daysOfWeek.length > 0) {
-      if (!course.details || course.details.length === 0) return false;
-      
-      const hasMatchingDay = course.details.some(detail => {
-        if (!detail.day_week) return false;
-        
-        // Получаем день недели по UID
-        const dayOfWeek = courseService.getDayOfWeekByUid(detail.day_week);
-        if (!dayOfWeek) {
-          // Fallback: ищем в mock данных
-          const mockDay = mockDaysOfWeek.find(d => d.uid === detail.day_week);
-          if (!mockDay) return false;
-          return filters.daysOfWeek.includes(mockDay.code);
-        }
-        
-        return filters.daysOfWeek.includes(dayOfWeek.code);
-      });
-      
-      if (!hasMatchingDay) return false;
-    }
+    // Комбинированная проверка деталей курса (дни недели, время, доступность)
+    const needsDetailCheck = (
+      (filters.daysOfWeek && filters.daysOfWeek.length > 0) ||
+      filters.isAvailableOnly ||
+      (filters.timeRange && (filters.timeRange.from !== '00:00' || filters.timeRange.to !== '23:59'))
+    );
 
-    // Фильтр по доступности мест
-    if (filters.isAvailableOnly) {
+    if (needsDetailCheck) {
       if (!course.details || course.details.length === 0) return false;
       
-      const hasAvailableSpots = course.details.some(detail => {
-        // Если count = 0, считаем что места есть (неограниченно)
-        if (detail.count === 0) return true;
-        // Если count > number_of_students, есть свободные места
-        return detail.count > detail.number_of_students;
-      });
-      
-      if (!hasAvailableSpots) return false;
-    }
-
-    // Фильтр по времени
-    if (filters.timeRange && (filters.timeRange.from !== '00:00' || filters.timeRange.to !== '23:59')) {
-      if (!course.details || course.details.length === 0) return false;
-      
-      const filterFromMinutes = timeToMinutes(filters.timeRange.from);
-      const filterToMinutes = timeToMinutes(filters.timeRange.to);
-      
-      const hasMatchingTime = course.details.some(detail => {
-        if (!detail.from_time) return false;
-        
-        // Получаем временной слот по UID
-        const timeSlot = courseService.getTimeSlotByUid(detail.from_time);
-        if (!timeSlot) {
-          // Fallback: ищем в mock данных
-          const mockSlot = mockTimeSlots.find(t => t.uid === detail.from_time);
-          if (!mockSlot) return false;
+      // Найти детали, которые удовлетворяют всем активным фильтрам одновременно
+      const hasValidDetail = course.details.some(detail => {
+        // Проверка дня недели
+        if (filters.daysOfWeek && filters.daysOfWeek.length > 0) {
+          if (!detail.day_week) return false;
           
-          const detailFromMinutes = timeToMinutes(mockSlot.from_time.substring(0, 5));
-          const detailToMinutes = timeToMinutes(mockSlot.to_time.substring(0, 5));
+          // Получаем день недели по UID
+          const dayOfWeek = courseService.getDayOfWeekByUid(detail.day_week);
+          let dayMatches = false;
           
-          // Проверяем пересечение временных интервалов
-          return !(detailToMinutes <= filterFromMinutes || detailFromMinutes >= filterToMinutes);
+          if (!dayOfWeek) {
+            // Fallback: ищем в mock данных
+            const mockDay = mockDaysOfWeek.find(d => d.uid === detail.day_week);
+            if (!mockDay) return false;
+            dayMatches = filters.daysOfWeek.includes(mockDay.code);
+          } else {
+            dayMatches = filters.daysOfWeek.includes(dayOfWeek.code);
+          }
+          
+          if (!dayMatches) return false;
         }
-        
-        const detailFromMinutes = timeToMinutes(timeSlot.from_time.substring(0, 5));
-        const detailToMinutes = timeToMinutes(timeSlot.to_time.substring(0, 5));
-        
-        // Проверяем пересечение временных интервалов
-        return !(detailToMinutes <= filterFromMinutes || detailFromMinutes >= filterToMinutes);
+
+        // Проверка доступности мест
+        if (filters.isAvailableOnly) {
+          // Если number_of_students = 0, места не указаны - пропускаем
+          if (detail.number_of_students === 0) return false;
+          
+          // Если count = 0, скорее всего никто не записан - есть места
+          if (detail.count === 0) {
+            // Продолжаем проверку других условий
+          } else {
+            // Если занято больше или равно чем всего мест - нет свободных мест
+            if (detail.count >= detail.number_of_students) return false;
+          }
+        }
+
+        // Проверка времени
+        if (filters.timeRange && (filters.timeRange.from !== '00:00' || filters.timeRange.to !== '23:59')) {
+          if (!detail.from_time) return false;
+          
+          const filterFromMinutes = timeToMinutes(filters.timeRange.from);
+          const filterToMinutes = timeToMinutes(filters.timeRange.to);
+          
+          // Получаем временной слот по UID
+          const timeSlot = courseService.getTimeSlotByUid(detail.from_time);
+          let timeMatches = false;
+          
+          if (!timeSlot) {
+            // Fallback: ищем в mock данных
+            const mockSlot = mockTimeSlots.find(t => t.uid === detail.from_time);
+            if (!mockSlot) return false;
+            
+            const detailFromMinutes = timeToMinutes(mockSlot.from_time.substring(0, 5));
+            const detailToMinutes = timeToMinutes(mockSlot.to_time.substring(0, 5));
+            
+            // Проверяем пересечение временных интервалов
+            timeMatches = !(detailToMinutes <= filterFromMinutes || detailFromMinutes >= filterToMinutes);
+          } else {
+            const detailFromMinutes = timeToMinutes(timeSlot.from_time.substring(0, 5));
+            const detailToMinutes = timeToMinutes(timeSlot.to_time.substring(0, 5));
+            
+            // Проверяем пересечение временных интервалов
+            timeMatches = !(detailToMinutes <= filterFromMinutes || detailFromMinutes >= filterToMinutes);
+          }
+          
+          if (!timeMatches) return false;
+        }
+
+        // Если дошли до сюда, значит все условия выполнены для этой детали
+        return true;
       });
       
-      if (!hasMatchingTime) return false;
+      if (!hasValidDetail) return false;
     }
 
     return true;
