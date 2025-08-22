@@ -108,9 +108,9 @@ export const mockCourses: Course[] = [
         },
         count: 20,
         number_of_students: 25,
-        day_week: 'monday',
-        from_time: '09:00',
-        to_time: '10:30'
+        day_week: 'monday-uid',
+        from_time: 'slot-1',
+        to_time: 'slot-1'
       },
       {
         load_type_name: {
@@ -124,9 +124,9 @@ export const mockCourses: Course[] = [
         },
         count: 15,
         number_of_students: 25,
-        day_week: 'wednesday',
-        from_time: '14:00',
-        to_time: '15:30'
+        day_week: 'wednesday-uid',
+        from_time: 'slot-4',
+        to_time: 'slot-4'
       }
     ]
   },
@@ -204,9 +204,9 @@ export const mockCourses: Course[] = [
         },
         count: 30,
         number_of_students: 35,
-        day_week: 'tuesday',
-        from_time: '10:00',
-        to_time: '11:30'
+        day_week: 'tuesday-uid',
+        from_time: 'slot-2',
+        to_time: 'slot-2'
       },
       {
         load_type_name: {
@@ -220,9 +220,9 @@ export const mockCourses: Course[] = [
         },
         count: 18,
         number_of_students: 35,
-        day_week: 'thursday',
-        from_time: '15:00',
-        to_time: '16:30'
+        day_week: 'thursday-uid',
+        from_time: 'slot-5',
+        to_time: 'slot-5'
       }
     ]
   },
@@ -317,9 +317,9 @@ export const mockCourses: Course[] = [
         },
         count: 25,
         number_of_students: 28,
-        day_week: 'monday',
-        from_time: '11:00',
-        to_time: '12:30'
+        day_week: 'monday-uid',
+        from_time: 'slot-3',
+        to_time: 'slot-3'
       },
       {
         load_type_name: {
@@ -333,9 +333,9 @@ export const mockCourses: Course[] = [
         },
         count: 20,
         number_of_students: 28,
-        day_week: 'friday',
-        from_time: '09:00',
-        to_time: '10:30'
+        day_week: 'friday-uid',
+        from_time: 'slot-1',
+        to_time: 'slot-1'
       }
     ]
   },
@@ -413,9 +413,9 @@ export const mockCourses: Course[] = [
         },
         count: 0,
         number_of_students: 20,
-        day_week: 'tuesday',
-        from_time: '16:00',
-        to_time: '17:30'
+        day_week: 'tuesday-uid',
+        from_time: 'slot-6',
+        to_time: 'slot-6'
       },
       {
         load_type_name: {
@@ -429,9 +429,9 @@ export const mockCourses: Course[] = [
         },
         count: 0,
         number_of_students: 20,
-        day_week: 'thursday',
-        from_time: '16:00',
-        to_time: '17:30'
+        day_week: 'thursday-uid',
+        from_time: 'slot-6',
+        to_time: 'slot-6'
       }
     ]
   },
@@ -526,9 +526,9 @@ export const mockCourses: Course[] = [
         },
         count: 22,
         number_of_students: 25,
-        day_week: 'wednesday',
-        from_time: '10:00',
-        to_time: '11:30'
+        day_week: 'wednesday-uid',
+        from_time: 'slot-2',
+        to_time: 'slot-2'
       },
       {
         load_type_name: {
@@ -542,9 +542,9 @@ export const mockCourses: Course[] = [
         },
         count: 15,
         number_of_students: 25,
-        day_week: 'friday',
-        from_time: '14:00',
-        to_time: '17:00'
+        day_week: 'friday-uid',
+        from_time: 'slot-4',
+        to_time: 'slot-6'
       }
     ]
   }

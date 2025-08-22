@@ -8,11 +8,11 @@ import {
   ChevronUp,
   CheckCircle,
   AlertCircle,
-  Globe
+  Globe,
+  Calendar
 } from 'lucide-react';
-import type { Course, CourseDetails } from '../types/course';
-import { courseService } from '../services/courseService';
-import { mockCourseDetails } from '../data/mockData';
+import type { Course } from '../types/course';
+import { formatTeacherName, getDayOfWeekName, getCourseDetailTimeRange } from '../utils/courseDisplay';
 
 interface CourseCardProps {
   course: Course;
@@ -20,28 +20,12 @@ interface CourseCardProps {
 
 export const CourseCard: React.FC<CourseCardProps> = ({ course }) => {
   const [isExpanded, setIsExpanded] = useState(false);
-  const [courseDetails, setCourseDetails] = useState<CourseDetails[]>([]);
-  const [loadingDetails, setLoadingDetails] = useState(false);
 
-  const handleToggleDetails = async () => {
-    if (!isExpanded && courseDetails.length === 0) {
-      setLoadingDetails(true);
-      try {
-        // В демо-режиме используем моковые данные
-        const details = window.location.hostname === 'localhost' && Math.random() > 0.5 
-          ? mockCourseDetails 
-          : await courseService.getCourseDetails(course.uid);
-        setCourseDetails(details);
-      } catch (error) {
-        console.error('Failed to load course details:', error);
-        // Fallback на демо-данные при ошибке
-        setCourseDetails(mockCourseDetails);
-      } finally {
-        setLoadingDetails(false);
-      }
-    }
+  const handleToggleDetails = () => {
     setIsExpanded(!isExpanded);
   };
+
+  const courseDetails = course.details || [];
 
   const getLanguageFlag = (lang: string) => {
     switch (lang.toLowerCase()) {
@@ -153,31 +137,45 @@ export const CourseCard: React.FC<CourseCardProps> = ({ course }) => {
         
         {isExpanded && (
           <div className="mt-4 space-y-3">
-            {loadingDetails ? (
-              <div className="flex items-center justify-center py-4">
-                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
-                <span className="ml-2 text-sm text-gray-600">Загрузка деталей...</span>
-              </div>
-            ) : courseDetails.length > 0 ? (
+            {courseDetails.length > 0 ? (
               <div className="space-y-3">
                 {courseDetails.map((detail, index) => (
                   <div key={index} className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
-                      <div className="flex items-center">
-                        <CheckCircle className="w-4 h-4 text-green-500 mr-2" />
-                        <span className="font-medium">{detail.load_type_name.name}</span>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+                      <div className="space-y-2">
+                        <div className="flex items-center">
+                          <CheckCircle className="w-4 h-4 text-green-500 mr-2 flex-shrink-0" />
+                          <span className="font-medium">{detail.load_type_name.name}</span>
+                        </div>
+                        <div className="flex items-center text-gray-600">
+                          <Users className="w-4 h-4 mr-2 flex-shrink-0" />
+                          <span>{formatTeacherName(detail.teacher)}</span>
+                        </div>
+                        <div className="flex items-center text-gray-600">
+                          <MapPin className="w-4 h-4 mr-2 flex-shrink-0" />
+                          <span>{detail.room?.name || 'Не указана'}</span>
+                        </div>
                       </div>
-                      <div className="flex items-center text-gray-600">
-                        <Users className="w-4 h-4 mr-2" />
-                        <span>{detail.teacher.name_initial}</span>
-                      </div>
-                      <div className="flex items-center text-gray-600">
-                        <MapPin className="w-4 h-4 mr-2" />
-                        <span>{detail.room?.name || 'TBA'}</span>
-                      </div>
-                      <div className="flex items-center text-gray-600">
-                        <Users className="w-4 h-4 mr-2" />
-                        <span>{detail.count}/{detail.number_of_students}</span>
+                      <div className="space-y-2">
+                        <div className="flex items-center text-gray-600">
+                          <Calendar className="w-4 h-4 mr-2 flex-shrink-0" />
+                          <span>{getDayOfWeekName(detail.day_week || '')}</span>
+                        </div>
+                        <div className="flex items-center text-gray-600">
+                          <Clock className="w-4 h-4 mr-2 flex-shrink-0" />
+                          <span>{getCourseDetailTimeRange(detail)}</span>
+                        </div>
+                        <div className="flex items-center text-gray-600">
+                          <Users className="w-4 h-4 mr-2 flex-shrink-0" />
+                          <span>
+                            {detail.count > 0 
+                              ? `${detail.count}/${detail.number_of_students} мест`
+                              : detail.number_of_students > 0 
+                                ? `${detail.number_of_students} мест`
+                                : 'Места не указаны'
+                            }
+                          </span>
+                        </div>
                       </div>
                     </div>
                   </div>
