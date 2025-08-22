@@ -94,6 +94,40 @@ export const mockCourses: Course[] = [
           code: null
         }
       }
+    ],
+    details: [
+      {
+        load_type_name: {
+          name: 'Лекция'
+        },
+        teacher: {
+          name_initial: 'Иванов И.И.'
+        },
+        room: {
+          name: 'Ауд. 301'
+        },
+        count: 20,
+        number_of_students: 25,
+        day_week: 'monday',
+        from_time: '09:00',
+        to_time: '10:30'
+      },
+      {
+        load_type_name: {
+          name: 'Семинар'
+        },
+        teacher: {
+          name_initial: 'Петров П.П.'
+        },
+        room: {
+          name: 'Ауд. 205'
+        },
+        count: 15,
+        number_of_students: 25,
+        day_week: 'wednesday',
+        from_time: '14:00',
+        to_time: '15:30'
+      }
     ]
   },
   {
@@ -155,6 +189,40 @@ export const mockCourses: Course[] = [
           name: 'On-campus',
           code: null
         }
+      }
+    ],
+    details: [
+      {
+        load_type_name: {
+          name: 'Лекция'
+        },
+        teacher: {
+          name_initial: 'Смит Д.'
+        },
+        room: {
+          name: 'Ауд. 101'
+        },
+        count: 30,
+        number_of_students: 35,
+        day_week: 'tuesday',
+        from_time: '10:00',
+        to_time: '11:30'
+      },
+      {
+        load_type_name: {
+          name: 'Лаборатория'
+        },
+        teacher: {
+          name_initial: 'Браун М.'
+        },
+        room: {
+          name: 'Лаб. 12'
+        },
+        count: 18,
+        number_of_students: 35,
+        day_week: 'thursday',
+        from_time: '15:00',
+        to_time: '16:30'
       }
     ]
   },
@@ -235,6 +303,40 @@ export const mockCourses: Course[] = [
           code: null
         }
       }
+    ],
+    details: [
+      {
+        load_type_name: {
+          name: 'Лекция'
+        },
+        teacher: {
+          name_initial: 'Волков А.С.'
+        },
+        room: {
+          name: 'Ауд. 401'
+        },
+        count: 25,
+        number_of_students: 28,
+        day_week: 'monday',
+        from_time: '11:00',
+        to_time: '12:30'
+      },
+      {
+        load_type_name: {
+          name: 'Практика'
+        },
+        teacher: {
+          name_initial: 'Волков А.С.'
+        },
+        room: {
+          name: 'Ауд. 402'
+        },
+        count: 20,
+        number_of_students: 28,
+        day_week: 'friday',
+        from_time: '09:00',
+        to_time: '10:30'
+      }
     ]
   },
   {
@@ -296,6 +398,40 @@ export const mockCourses: Course[] = [
           name: 'Hybrid',
           code: null
         }
+      }
+    ],
+    details: [
+      {
+        load_type_name: {
+          name: 'Практика'
+        },
+        teacher: {
+          name_initial: 'Не назначен'
+        },
+        room: {
+          name: 'Спортзал'
+        },
+        count: 0,
+        number_of_students: 20,
+        day_week: 'tuesday',
+        from_time: '16:00',
+        to_time: '17:30'
+      },
+      {
+        load_type_name: {
+          name: 'Практика'
+        },
+        teacher: {
+          name_initial: 'Не назначен'
+        },
+        room: {
+          name: 'Стадион'
+        },
+        count: 0,
+        number_of_students: 20,
+        day_week: 'thursday',
+        from_time: '16:00',
+        to_time: '17:30'
       }
     ]
   },
@@ -376,8 +512,61 @@ export const mockCourses: Course[] = [
           code: null
         }
       }
+    ],
+    details: [
+      {
+        load_type_name: {
+          name: 'Лекция'
+        },
+        teacher: {
+          name_initial: 'Джонсон Р.'
+        },
+        room: {
+          name: 'Ауд. 203'
+        },
+        count: 22,
+        number_of_students: 25,
+        day_week: 'wednesday',
+        from_time: '10:00',
+        to_time: '11:30'
+      },
+      {
+        load_type_name: {
+          name: 'Лаборатория'
+        },
+        teacher: {
+          name_initial: 'Тейлор К.'
+        },
+        room: {
+          name: 'Лаб. 5'
+        },
+        count: 15,
+        number_of_students: 25,
+        day_week: 'friday',
+        from_time: '14:00',
+        to_time: '17:00'
+      }
     ]
   }
+];
+
+export const mockDaysOfWeek = [
+  { uid: 'monday-uid', name: 'Понедельник', code: 'monday', serial_number: 1 },
+  { uid: 'tuesday-uid', name: 'Вторник', code: 'tuesday', serial_number: 2 },
+  { uid: 'wednesday-uid', name: 'Среда', code: 'wednesday', serial_number: 3 },
+  { uid: 'thursday-uid', name: 'Четверг', code: 'thursday', serial_number: 4 },
+  { uid: 'friday-uid', name: 'Пятница', code: 'friday', serial_number: 5 },
+  { uid: 'saturday-uid', name: 'Суббота', code: 'saturday', serial_number: 6 },
+  { uid: 'sunday-uid', name: 'Воскресенье', code: 'sunday', serial_number: 7 }
+];
+
+export const mockTimeSlots = [
+  { uid: 'slot-1', from_time: '08:00:00', to_time: '09:30:00', name: '1-я пара' },
+  { uid: 'slot-2', from_time: '09:45:00', to_time: '11:15:00', name: '2-я пара' },
+  { uid: 'slot-3', from_time: '11:30:00', to_time: '13:00:00', name: '3-я пара' },
+  { uid: 'slot-4', from_time: '14:00:00', to_time: '15:30:00', name: '4-я пара' },
+  { uid: 'slot-5', from_time: '15:45:00', to_time: '17:15:00', name: '5-я пара' },
+  { uid: 'slot-6', from_time: '17:30:00', to_time: '19:00:00', name: '6-я пара' }
 ];
 
 export const mockCourseDetails = [

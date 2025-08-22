@@ -1,5 +1,6 @@
 import axios from 'axios';
 import type { Course, CourseDetails, DayOfWeek, TimeSlot } from '../types/course';
+import { mockDaysOfWeek, mockTimeSlots } from '../data/mockData';
 
 // Используем локальный прокси вместо прямого обращения к серверу
 const API_BASE_URL = '/api/v1';
@@ -181,7 +182,9 @@ export class CourseService {
       return [];
     } catch (error: any) {
       console.error('Failed to fetch days of week:', error.response?.status, error.response?.data || error.message);
-      return [];
+      // Возвращаем mock данные в случае ошибки (например, в демо режиме)
+      mockDaysOfWeek.forEach(day => this.daysOfWeekCache.set(day.uid, day));
+      return mockDaysOfWeek;
     }
   }
 
@@ -202,7 +205,9 @@ export class CourseService {
       return [];
     } catch (error: any) {
       console.error('Failed to fetch time slots:', error.response?.status, error.response?.data || error.message);
-      return [];
+      // Возвращаем mock данные в случае ошибки (например, в демо режиме)
+      mockTimeSlots.forEach(slot => this.timeSlotsCache.set(slot.uid, slot));
+      return mockTimeSlots;
     }
   }
 
