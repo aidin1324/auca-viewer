@@ -1,5 +1,11 @@
-import React, { useState } from 'react';
-import { LogIn, Eye, EyeOff, Lock, User, Database } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { LogIn, Eye, EyeOff, Lock, User, Database, Save, Clock, X } from 'lucide-react';
+
+interface SavedAccount {
+  username: string;
+  password: string;
+  lastUsed: number;
+}
 
 interface LoginFormProps {
   onLogin: (username: string, password: string) => Promise<boolean>;
@@ -7,11 +13,96 @@ interface LoginFormProps {
   isLoading: boolean;
 }
 
+const STORAGE_KEY = 'auca_saved_accounts';
+const MAX_SAVED_ACCOUNTS = 3;
+
 export const LoginForm: React.FC<LoginFormProps> = ({ onLogin, onDemoMode, isLoading }) => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
+  const [rememberCredentials, setRememberCredentials] = useState(false);
+  const [savedAccounts, setSavedAccounts] = useState<SavedAccount[]>([]);
+  const [showSavedAccounts, setShowSavedAccounts] = useState(false);
+
+  // Загружаем сохраненные аккаунты при инициализации
+  useEffect(() => {
+    loadSavedAccounts();
+  }, []);
+
+  const loadSavedAccounts = () => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved) {
+        const accounts: SavedAccount[] = JSON.parse(saved);
+        // Сортируем по времени последнего использования
+        accounts.sort((a, b) => b.lastUsed - a.lastUsed);
+        setSavedAccounts(accounts);
+        
+        // Если есть сохраненные аккаунты, показываем их
+        if (accounts.length > 0) {
+          setShowSavedAccounts(true);
+        }
+      }
+    } catch (error) {
+      console.error('Error loading saved accounts:', error);
+    }
+  };
+
+  const saveAccount = (username: string, password: string) => {
+    try {
+      let accounts = [...savedAccounts];
+      
+      // Проверяем, есть ли уже такой аккаунт
+      const existingIndex = accounts.findIndex(acc => acc.username === username);
+      
+      if (existingIndex >= 0) {
+        // Обновляем существующий аккаунт
+        accounts[existingIndex] = {
+          username,
+          password,
+          lastUsed: Date.now()
+        };
+      } else {
+        // Добавляем новый аккаунт
+        accounts.unshift({
+          username,
+          password,
+          lastUsed: Date.now()
+        });
+        
+        // Ограничиваем количество сохраненных аккаунтов
+        if (accounts.length > MAX_SAVED_ACCOUNTS) {
+          accounts = accounts.slice(0, MAX_SAVED_ACCOUNTS);
+        }
+      }
+      
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(accounts));
+      setSavedAccounts(accounts);
+    } catch (error) {
+      console.error('Error saving account:', error);
+    }
+  };
+
+  const removeSavedAccount = (usernameToRemove: string) => {
+    try {
+      const filtered = savedAccounts.filter(acc => acc.username !== usernameToRemove);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(filtered));
+      setSavedAccounts(filtered);
+      
+      if (filtered.length === 0) {
+        setShowSavedAccounts(false);
+      }
+    } catch (error) {
+      console.error('Error removing account:', error);
+    }
+  };
+
+  const selectSavedAccount = (account: SavedAccount) => {
+    setUsername(account.username);
+    setPassword(account.password);
+    setShowSavedAccounts(false);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -24,7 +115,12 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLogin, onDemoMode, isLoa
 
     try {
       const success = await onLogin(username, password);
-      if (!success) {
+      if (success) {
+        // Сохраняем аккаунт при успешном входе, если включено запоминание
+        if (rememberCredentials) {
+          saveAccount(username, password);
+        }
+      } else {
         setError('Неверные учетные данные');
       }
     } catch (error) {
@@ -49,6 +145,65 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLogin, onDemoMode, isLoa
           {error && (
             <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
               {error}
+            </div>
+          )}
+
+          {/* Saved Accounts */}
+          {savedAccounts.length > 0 && (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <label className="text-sm font-medium text-gray-700">
+                  Сохраненные аккаунты
+                </label>
+                <button
+                  type="button"
+                  onClick={() => setShowSavedAccounts(!showSavedAccounts)}
+                  className="text-sm text-blue-600 hover:text-blue-700 transition-colors"
+                >
+                  {showSavedAccounts ? 'Скрыть' : 'Показать'}
+                </button>
+              </div>
+              
+              {showSavedAccounts && (
+                <div className="space-y-2">
+                  {savedAccounts.map((account, index) => (
+                    <div
+                      key={index}
+                      className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200 hover:bg-gray-100 transition-colors"
+                    >
+                      <div className="flex items-center space-x-3">
+                        <Clock className="w-4 h-4 text-gray-400" />
+                        <div>
+                          <div className="text-sm font-medium text-gray-900">
+                            {account.username}
+                          </div>
+                          <div className="text-xs text-gray-500">
+                            Использован: {new Date(account.lastUsed).toLocaleDateString('ru-RU')}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <button
+                          type="button"
+                          onClick={() => selectSavedAccount(account)}
+                          className="px-3 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+                          disabled={isLoading}
+                        >
+                          Выбрать
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => removeSavedAccount(account.username)}
+                          className="p-1 text-gray-400 hover:text-red-600 transition-colors"
+                          disabled={isLoading}
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
 
@@ -94,6 +249,22 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLogin, onDemoMode, isLoa
                 {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
               </button>
             </div>
+          </div>
+
+          {/* Remember Me Checkbox */}
+          <div className="flex items-center">
+            <input
+              id="remember"
+              type="checkbox"
+              checked={rememberCredentials}
+              onChange={(e) => setRememberCredentials(e.target.checked)}
+              className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+              disabled={isLoading}
+            />
+            <label htmlFor="remember" className="ml-2 text-sm text-gray-600 flex items-center">
+              <Save className="w-4 h-4 mr-1" />
+              Запомнить учетные данные
+            </label>
           </div>
 
           <button
