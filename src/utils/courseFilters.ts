@@ -1,4 +1,6 @@
 import type { Course, FilterOptions } from '../types/course';
+import { courseService } from '../services/courseService';
+import { mockDaysOfWeek, mockTimeSlots } from '../data/mockData';
 
 // Вспомогательная функция для конвертации времени в минуты
 const timeToMinutes = (timeString: string): number => {
@@ -58,13 +60,20 @@ export const filterCourses = (courses: Course[], filters: FilterOptions): Course
     if (filters.daysOfWeek && filters.daysOfWeek.length > 0) {
       if (!course.details || course.details.length === 0) return false;
       
-      const courseDays = course.details
-        .filter(detail => detail.day_week)
-        .map(detail => detail.day_week);
-      
-      const hasMatchingDay = filters.daysOfWeek.some(filterDay => 
-        courseDays.includes(filterDay)
-      );
+      const hasMatchingDay = course.details.some(detail => {
+        if (!detail.day_week) return false;
+        
+        // Получаем день недели по UID
+        const dayOfWeek = courseService.getDayOfWeekByUid(detail.day_week);
+        if (!dayOfWeek) {
+          // Fallback: ищем в mock данных
+          const mockDay = mockDaysOfWeek.find(d => d.uid === detail.day_week);
+          if (!mockDay) return false;
+          return filters.daysOfWeek.includes(mockDay.code);
+        }
+        
+        return filters.daysOfWeek.includes(dayOfWeek.code);
+      });
       
       if (!hasMatchingDay) return false;
     }
@@ -73,9 +82,12 @@ export const filterCourses = (courses: Course[], filters: FilterOptions): Course
     if (filters.isAvailableOnly) {
       if (!course.details || course.details.length === 0) return false;
       
-      const hasAvailableSpots = course.details.some(detail => 
-        detail.count > detail.number_of_students
-      );
+      const hasAvailableSpots = course.details.some(detail => {
+        // Если count = 0, считаем что места есть (неограниченно)
+        if (detail.count === 0) return true;
+        // Если count > number_of_students, есть свободные места
+        return detail.count > detail.number_of_students;
+      });
       
       if (!hasAvailableSpots) return false;
     }
@@ -88,13 +100,27 @@ export const filterCourses = (courses: Course[], filters: FilterOptions): Course
       const filterToMinutes = timeToMinutes(filters.timeRange.to);
       
       const hasMatchingTime = course.details.some(detail => {
-        if (!detail.from_time || !detail.to_time) return false;
+        if (!detail.from_time) return false;
         
-        const detailFromMinutes = timeToMinutes(detail.from_time.substring(0, 5)); // берем только HH:mm часть
-        const detailToMinutes = timeToMinutes(detail.to_time.substring(0, 5));
+        // Получаем временной слот по UID
+        const timeSlot = courseService.getTimeSlotByUid(detail.from_time);
+        if (!timeSlot) {
+          // Fallback: ищем в mock данных
+          const mockSlot = mockTimeSlots.find(t => t.uid === detail.from_time);
+          if (!mockSlot) return false;
+          
+          const detailFromMinutes = timeToMinutes(mockSlot.from_time.substring(0, 5));
+          const detailToMinutes = timeToMinutes(mockSlot.to_time.substring(0, 5));
+          
+          // Проверяем пересечение временных интервалов
+          return !(detailToMinutes <= filterFromMinutes || detailFromMinutes >= filterToMinutes);
+        }
+        
+        const detailFromMinutes = timeToMinutes(timeSlot.from_time.substring(0, 5));
+        const detailToMinutes = timeToMinutes(timeSlot.to_time.substring(0, 5));
         
         // Проверяем пересечение временных интервалов
-        return detailFromMinutes >= filterFromMinutes && detailToMinutes <= filterToMinutes;
+        return !(detailToMinutes <= filterFromMinutes || detailFromMinutes >= filterToMinutes);
       });
       
       if (!hasMatchingTime) return false;
