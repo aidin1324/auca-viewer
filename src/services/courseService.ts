@@ -1,5 +1,5 @@
 import axios from 'axios';
-import type { Course, CourseDetails, DayOfWeek, TimeSlot } from '../types/course';
+import type { Course, CourseCacheInfo, CourseDetails, DayOfWeek, TimeSlot } from '../types/course';
 import { mockDaysOfWeek, mockTimeSlots } from '../data/mockData';
 
 // Используем локальный прокси вместо прямого обращения к серверу
@@ -19,14 +19,40 @@ const API_PARAMS = {
   study_plan: '6b979d86-bd36-409e-80a1-76f45a7146cf',
   status_info: 'cee725fe-0505-40fc-95a1-dd8e195fe9a9',
   rule_for_course: '2201841b-6a6a-43b0-8ce8-56917b947c8c',
-  study_year: '2ccb68d9-39dc-11ee-a354-005056b702b8',
+  study_year: '65a009ad-39f7-11ee-a354-005056b702b8',
   semester: 'a87aaf26-09b1-11ee-8d5e-c0e43437ce6e'
+};
+
+const COURSE_CACHE_KEY = `auca_courses_cache_v2_${API_PARAMS.study_year}_${API_PARAMS.semester}`;
+const COURSE_CACHE_TTL_MS = 12 * 60 * 60 * 1000;
+
+interface CoursesCachePayload {
+  updatedAt: number;
+  courses: Course[];
+}
+
+const canUseStorage = () => typeof window !== 'undefined' && Boolean(window.localStorage);
+
+const getRequestErrorStatus = (error: unknown) => (
+  axios.isAxiosError(error) ? error.response?.status : undefined
+);
+
+const getRequestErrorDetails = (error: unknown) => {
+  if (axios.isAxiosError(error)) {
+    return error.response?.data || error.message;
+  }
+
+  return error instanceof Error ? error.message : error;
 };
 
 export class CourseService {
   private static instance: CourseService;
   private daysOfWeekCache: Map<string, DayOfWeek> = new Map();
   private timeSlotsCache: Map<string, TimeSlot> = new Map();
+  private courseCacheInfo: CourseCacheInfo = {
+    updatedAt: null,
+    fromCache: false
+  };
   
   private axiosInstance = axios.create({
     timeout: 30000,
@@ -60,20 +86,6 @@ export class CourseService {
       }
     );
 
-    // Загружаем справочники при инициализации
-    this.initializeReferenceData();
-  }
-
-  private async initializeReferenceData() {
-    try {
-      await Promise.all([
-        this.getDaysOfWeek(),
-        this.getTimeSlots()
-      ]);
-      console.log('Reference data initialized successfully');
-    } catch (error) {
-      console.warn('Failed to initialize reference data:', error);
-    }
   }
 
   static getInstance(): CourseService {
@@ -81,6 +93,91 @@ export class CourseService {
       CourseService.instance = new CourseService();
     }
     return CourseService.instance;
+  }
+
+  getCacheInfo(): CourseCacheInfo {
+    return this.courseCacheInfo;
+  }
+
+  clearCourseCache() {
+    if (!canUseStorage()) return;
+    window.localStorage.removeItem(COURSE_CACHE_KEY);
+    this.courseCacheInfo = {
+      updatedAt: null,
+      fromCache: false
+    };
+  }
+
+  private readCachedCourses(): Course[] | null {
+    if (!canUseStorage()) return null;
+
+    try {
+      const rawCache = window.localStorage.getItem(COURSE_CACHE_KEY);
+      if (!rawCache) return null;
+
+      const cache = JSON.parse(rawCache) as CoursesCachePayload;
+      if (!Array.isArray(cache.courses) || !cache.updatedAt) return null;
+
+      const isFresh = Date.now() - cache.updatedAt < COURSE_CACHE_TTL_MS;
+      if (!isFresh) return null;
+
+      this.courseCacheInfo = {
+        updatedAt: cache.updatedAt,
+        fromCache: true
+      };
+
+      return cache.courses;
+    } catch (error) {
+      console.warn('Failed to read cached courses', error);
+      return null;
+    }
+  }
+
+  private saveCoursesCache(courses: Course[]) {
+    if (!canUseStorage()) return;
+
+    try {
+      const updatedAt = Date.now();
+      const payload: CoursesCachePayload = {
+        updatedAt,
+        courses
+      };
+
+      window.localStorage.setItem(COURSE_CACHE_KEY, JSON.stringify(payload));
+      this.courseCacheInfo = {
+        updatedAt,
+        fromCache: false
+      };
+    } catch (error) {
+      console.warn('Failed to save courses cache', error);
+    }
+  }
+
+  private updateCachedCourse(course: Course) {
+    if (!canUseStorage()) return;
+
+    try {
+      const rawCache = window.localStorage.getItem(COURSE_CACHE_KEY);
+      if (!rawCache) return;
+
+      const cache = JSON.parse(rawCache) as CoursesCachePayload;
+      const updatedCourses = cache.courses.map(item => (
+        item.uid === course.uid ? course : item
+      ));
+
+      const updatedAt = Date.now();
+      window.localStorage.setItem(COURSE_CACHE_KEY, JSON.stringify({
+        updatedAt,
+        courses: updatedCourses
+      } satisfies CoursesCachePayload));
+
+      this.courseCacheInfo = {
+        updatedAt,
+        fromCache: false
+      };
+    } catch (error) {
+      console.warn('Failed to update cached course', error);
+    }
   }
 
   async authenticate(username: string, password: string): Promise<boolean> {
@@ -103,8 +200,8 @@ export class CourseService {
       
       console.log('Authentication failed - invalid status:', response.status);
       return false;
-    } catch (error: any) {
-      console.error('Authentication failed:', error.response?.status, error.response?.data || error.message);
+    } catch (error: unknown) {
+      console.error('Authentication failed:', getRequestErrorStatus(error), getRequestErrorDetails(error));
       return false;
     }
   }
@@ -148,10 +245,10 @@ export class CourseService {
       
       console.log(`Total courses fetched: ${allCourses.length}`);
       return allCourses;
-    } catch (error: any) {
-      console.error('Failed to fetch courses:', error.response?.status, error.response?.data || error.message);
+    } catch (error: unknown) {
+      console.error('Failed to fetch courses:', getRequestErrorStatus(error), getRequestErrorDetails(error));
       
-      if (error.response?.status === 401) {
+      if (getRequestErrorStatus(error) === 401) {
         throw new Error('UNAUTHORIZED');
       }
       
@@ -174,8 +271,8 @@ export class CourseService {
       }
       
       return [];
-    } catch (error: any) {
-      console.error('Failed to fetch course details:', error.response?.status, error.response?.data || error.message);
+    } catch (error: unknown) {
+      console.error('Failed to fetch course details:', getRequestErrorStatus(error), getRequestErrorDetails(error));
       return [];
     }
   }
@@ -200,8 +297,8 @@ export class CourseService {
       }
       
       return [];
-    } catch (error: any) {
-      console.error('Failed to fetch days of week:', error.response?.status, error.response?.data || error.message);
+    } catch (error: unknown) {
+      console.error('Failed to fetch days of week:', getRequestErrorStatus(error), getRequestErrorDetails(error));
       // Возвращаем mock данные в случае ошибки (например, в демо режиме)
       if (this.daysOfWeekCache.size === 0) {
         mockDaysOfWeek.forEach(day => this.daysOfWeekCache.set(day.uid, day));
@@ -231,8 +328,8 @@ export class CourseService {
       }
       
       return [];
-    } catch (error: any) {
-      console.error('Failed to fetch time slots:', error.response?.status, error.response?.data || error.message);
+    } catch (error: unknown) {
+      console.error('Failed to fetch time slots:', getRequestErrorStatus(error), getRequestErrorDetails(error));
       // Возвращаем mock данные в случае ошибки (например, в демо режиме)
       if (this.timeSlotsCache.size === 0) {
         mockTimeSlots.forEach(slot => this.timeSlotsCache.set(slot.uid, slot));
@@ -278,8 +375,32 @@ export class CourseService {
     return null;
   }
 
-  async getAllCoursesWithDetails(): Promise<Course[]> {
+  async refreshCourseDetails(course: Course): Promise<Course> {
+    await Promise.all([
+      this.getDaysOfWeek(),
+      this.getTimeSlots()
+    ]);
+
+    const details = await this.getCourseDetails(course.uid);
+    const updatedCourse = {
+      ...course,
+      details
+    };
+
+    this.updateCachedCourse(updatedCourse);
+    return updatedCourse;
+  }
+
+  async getAllCoursesWithDetails(forceRefresh = false): Promise<Course[]> {
     console.log('Loading courses with details...');
+
+    if (!forceRefresh) {
+      const cachedCourses = this.readCachedCourses();
+      if (cachedCourses) {
+        console.log(`Using cached courses: ${cachedCourses.length}`);
+        return cachedCourses;
+      }
+    }
     
     // Сначала загружаем справочники
     await Promise.all([
@@ -318,6 +439,7 @@ export class CourseService {
     }
 
     console.log('All course details loaded successfully');
+    this.saveCoursesCache(coursesWithDetails);
     return coursesWithDetails;
   }
 }

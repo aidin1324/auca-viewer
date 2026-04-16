@@ -23,5 +23,9 @@
     "noFallthroughCasesInSwitch": true,
     "noUncheckedSideEffectImports": true
   },
-  "include": ["src"]
+  "include": ["src"],
+  "exclude": [
+    "src/components/FilterPanel_old.tsx",
+    "src/components/FilterPanel_new.tsx"
+  ]
 }

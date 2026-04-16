@@ -123,7 +123,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLogin, onDemoMode, isLoa
       } else {
         setError('Неверные учетные данные');
       }
-    } catch (error) {
+    } catch {
       setError('Ошибка подключения к серверу');
     }
   };

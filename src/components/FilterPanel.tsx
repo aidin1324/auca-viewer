@@ -3,6 +3,7 @@ import { Search, Filter, X, SlidersHorizontal, Clock, Calendar, Users, ChevronDo
 import type { Course, FilterOptions, DayOfWeek } from '../types/course';
 import { getUniqueValues, getCreditRange } from '../utils/courseFilters';
 import { courseService } from '../services/courseService';
+import { mockDaysOfWeek } from '../data/mockData';
 
 interface FilterPanelProps {
   courses: Course[];
@@ -10,11 +11,12 @@ interface FilterPanelProps {
   onFilterChange: (filters: FilterOptions) => void;
   isOpen: boolean;
   onToggle: () => void;
+  useMockReferenceData?: boolean;
 }
 
 interface QuickFiltersProps {
   filters: FilterOptions;
-  onFilterUpdate: (key: keyof FilterOptions, value: any) => void;
+  onFilterUpdate: (key: keyof FilterOptions, value: FilterOptions[keyof FilterOptions]) => void;
   uniqueSemesters: string[];
   uniqueLanguages: string[];
   creditRange: [number, number];
@@ -22,7 +24,7 @@ interface QuickFiltersProps {
 
 interface AdvancedFiltersProps {
   filters: FilterOptions;
-  onFilterUpdate: (key: keyof FilterOptions, value: any) => void;
+  onFilterUpdate: (key: keyof FilterOptions, value: FilterOptions[keyof FilterOptions]) => void;
   uniqueCycles: string[];
   uniqueComponents: string[];
   uniqueFormats: string[];
@@ -275,13 +277,19 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
   filters,
   onFilterChange,
   isOpen,
-  onToggle
+  onToggle,
+  useMockReferenceData = false
 }) => {
   const [daysOfWeek, setDaysOfWeek] = useState<DayOfWeek[]>([]);
 
   // Загружаем справочные данные при монтировании компонента
   useEffect(() => {
     const loadReferenceData = async () => {
+      if (useMockReferenceData) {
+        setDaysOfWeek(mockDaysOfWeek);
+        return;
+      }
+
       try {
         const [days] = await Promise.all([
           courseService.getDaysOfWeek()
@@ -293,7 +301,7 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
     };
     
     loadReferenceData();
-  }, []);
+  }, [useMockReferenceData]);
 
   const creditRange = getCreditRange(courses);
   const uniqueSemesters = getUniqueValues(courses, 'semester');
@@ -302,7 +310,7 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
   const uniqueComponents = getUniqueValues(courses, 'component');
   const uniqueFormats = getUniqueValues(courses, 'trainingFormat');
 
-  const handleFilterUpdate = (key: keyof FilterOptions, value: any) => {
+  const handleFilterUpdate = (key: keyof FilterOptions, value: FilterOptions[keyof FilterOptions]) => {
     onFilterChange({
       ...filters,
       [key]: value

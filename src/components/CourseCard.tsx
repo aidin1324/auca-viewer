@@ -9,16 +9,40 @@ import {
   CheckCircle,
   AlertCircle,
   Globe,
-  Calendar
+  Calendar,
+  RefreshCw,
+  Target
 } from 'lucide-react';
-import type { Course } from '../types/course';
+import type { Course, CoursePriority } from '../types/course';
 import { formatTeacherName, getDayOfWeekName, getCourseDetailTimeRange } from '../utils/courseDisplay';
+import { describeStatusReason, getCourseAvailability } from '../utils/courseStatus';
 
 interface CourseCardProps {
   course: Course;
+  priority?: CoursePriority;
+  isPlanned?: boolean;
+  isRefreshing?: boolean;
+  onAddToPlanner?: (course: Course) => void;
+  onSetPriority?: (courseUid: string, priority: CoursePriority | null) => void;
+  onRefresh?: (course: Course) => void;
 }
 
-export const CourseCard: React.FC<CourseCardProps> = ({ course }) => {
+const PRIORITY_LABELS: Record<CoursePriority, string> = {
+  must: 'Must take',
+  nice: 'Nice to have',
+  backup: 'Backup',
+  avoid: 'Avoid'
+};
+
+export const CourseCard: React.FC<CourseCardProps> = ({
+  course,
+  priority,
+  isPlanned = false,
+  isRefreshing = false,
+  onAddToPlanner,
+  onSetPriority,
+  onRefresh
+}) => {
   const [isExpanded, setIsExpanded] = useState(false);
 
   const handleToggleDetails = () => {
@@ -26,6 +50,7 @@ export const CourseCard: React.FC<CourseCardProps> = ({ course }) => {
   };
 
   const courseDetails = course.details || [];
+  const availability = getCourseAvailability(course);
 
   const getLanguageFlag = (lang: string) => {
     switch (lang.toLowerCase()) {
@@ -50,7 +75,7 @@ export const CourseCard: React.FC<CourseCardProps> = ({ course }) => {
     <div className="course-card bg-white rounded-xl shadow-md hover:shadow-lg transition-all duration-300 border border-gray-100 overflow-hidden">
       {/* Header */}
       <div className="p-6 border-b border-gray-100">
-        <div className="flex justify-between items-start mb-3">
+        <div className="flex flex-col gap-4 xl:flex-row xl:justify-between xl:items-start mb-3">
           <div className="flex-1">
             <h3 className="text-lg font-semibold text-gray-900 mb-1">
               {course.discipline.name}
@@ -58,15 +83,58 @@ export const CourseCard: React.FC<CourseCardProps> = ({ course }) => {
             <p className="text-sm font-medium text-blue-600 mb-2">
               {course.discipline.courseabbreviation}
             </p>
-          </div>
-          <div className="flex items-center space-x-2">
-            <span className="text-xl">{getLanguageFlag(course.language.name)}</span>
-            <div className="flex items-center bg-blue-50 px-3 py-1 rounded-full">
-              <BookOpen className="w-4 h-4 text-blue-600 mr-1" />
-              <span className="text-sm font-medium text-blue-600">
-                {course.credit} кредитов
-              </span>
+            <div className={`inline-flex items-center px-3 py-1 rounded-full border text-xs font-medium ${availability.tone}`}>
+              {availability.label}
             </div>
+          </div>
+          <div className="flex flex-col sm:flex-row xl:flex-col 2xl:flex-row gap-2 xl:items-end">
+            <div className="flex items-center gap-2">
+              <span className="text-xl">{getLanguageFlag(course.language.name)}</span>
+              <div className="flex items-center bg-blue-50 px-3 py-1 rounded-full">
+                <BookOpen className="w-4 h-4 text-blue-600 mr-1" />
+                <span className="text-sm font-medium text-blue-600">
+                  {course.credit} кредитов
+                </span>
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => onAddToPlanner?.(course)}
+                disabled={!onAddToPlanner || isPlanned}
+                className={`inline-flex items-center gap-2 px-3 py-2 rounded-lg border text-sm font-medium transition-colors ${
+                  isPlanned
+                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                    : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                } disabled:cursor-default`}
+              >
+                <Target className="w-4 h-4" />
+                {isPlanned ? 'В плане' : 'В план'}
+              </button>
+              <button
+                type="button"
+                onClick={() => onRefresh?.(course)}
+                disabled={!onRefresh || isRefreshing}
+                className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-60"
+                title="Обновить только этот курс"
+              >
+                <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+                Refresh
+              </button>
+            </div>
+            {onSetPriority && (
+              <select
+                value={priority || ''}
+                onChange={(event) => onSetPriority(course.uid, event.target.value ? event.target.value as CoursePriority : null)}
+                className="px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm text-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                aria-label="Wishlist priority"
+              >
+                <option value="">Priority</option>
+                {Object.entries(PRIORITY_LABELS).map(([value, label]) => (
+                  <option key={value} value={value}>{label}</option>
+                ))}
+              </select>
+            )}
           </div>
         </div>
 
@@ -123,6 +191,9 @@ export const CourseCard: React.FC<CourseCardProps> = ({ course }) => {
             <span>{course.study_year.name}</span>
           </div>
         </div>
+        <p className="mt-4 text-xs leading-5 text-gray-500">
+          {describeStatusReason(course)}
+        </p>
       </div>
 
       {/* Expandable Details */}

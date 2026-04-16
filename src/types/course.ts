@@ -26,7 +26,7 @@ export interface Course {
     uid: string;
     name: string;
   };
-  registration_priority: any[];
+  registration_priority: unknown[];
   prerequisites: Prerequisite[];
   is_recommended_disciplines: boolean;
   is_connected_with: boolean;
@@ -44,17 +44,24 @@ export interface Course {
     code: string | null;
   };
   requestteacherpermission_count: number;
-  field_sciences: any[];
+  field_sciences: unknown[];
   flux: FluxInfo[];
   details?: CourseDetails[]; // Добавляем опциональное поле с деталями
+}
+
+export type CoursePriority = 'must' | 'nice' | 'backup' | 'avoid';
+
+export interface CourseCacheInfo {
+  updatedAt: number | null;
+  fromCache: boolean;
 }
 
 export interface Prerequisite {
   uid: string;
   is_active: boolean;
-  education_program: any;
+  education_program: unknown;
   required_discipline: string;
-  uuid1c: any;
+  uuid1c: unknown;
   required_discipline_ser: {
     uid: string;
     name: string;
@@ -63,19 +70,19 @@ export interface Prerequisite {
     courseabbreviation: string;
     courseid: number;
   };
-  and_prerequisites: any[];
+  and_prerequisites: unknown[];
 }
 
 export interface FluxInfo {
   uid: string;
   number_of_times_per_week: number;
   year_of_admission: string;
-  period_from: any;
-  period_to: any;
+  period_from: unknown;
+  period_to: unknown;
   training_format: {
     uid: string;
     name: string;
-    code: any;
+    code: unknown;
   };
 }
 

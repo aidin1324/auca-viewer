@@ -1,8 +1,16 @@
 import { courseService } from '../services/courseService';
 import { mockDaysOfWeek, mockTimeSlots } from '../data/mockData';
+import type { CourseDetails } from '../types/course';
+
+interface TeacherName {
+  name_initial?: string;
+  firstName?: string;
+  lastName?: string;
+  middleName?: string;
+}
 
 // Форматирование имени преподавателя
-export function formatTeacherName(teacher: any): string {
+export function formatTeacherName(teacher?: TeacherName | null): string {
   if (!teacher) return 'Не указан';
   
   // Если есть готовое поле name_initial, используем его
@@ -72,7 +80,7 @@ function formatTime(timeString: string): string {
 }
 
 // Получение интервала времени для деталей курса
-export function getCourseDetailTimeRange(detail: any): string {
+export function getCourseDetailTimeRange(detail: Pick<CourseDetails, 'from_time' | 'to_time'>): string {
   if (!detail.from_time) return 'Время не указано';
   
   // Если from_time и to_time одинаковые (один временной слот)

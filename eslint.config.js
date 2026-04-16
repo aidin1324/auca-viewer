@@ -6,7 +6,11 @@ import tseslint from 'typescript-eslint'
 import { globalIgnores } from 'eslint/config'
 
 export default tseslint.config([
-  globalIgnores(['dist']),
+  globalIgnores([
+    'dist',
+    'src/components/FilterPanel_old.tsx',
+    'src/components/FilterPanel_new.tsx',
+  ]),
   {
     files: ['**/*.{ts,tsx}'],
     extends: [
